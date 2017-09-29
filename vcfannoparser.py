@@ -27,12 +27,17 @@ def main(argv):
     args = parser.parse_args()
     #print 'base quality: %d', args.base_quality
 
+    #create a output file name
+    suffix = "_%s_bq%d.out" % (args.tissue_type, args.base_quality)
+    outfname = args.vcf_file.split(".vcf")[0] + suffix
+
     #open the vcf file
     #read line by line
     #return only lines with >= base_quality 
     bq = 0
     with open(args.vcf_file, 'r') as f:
-        with open(args.vcf_file.split(".")[0] + '.out', 'w') as of:
+        with open(outfname, 'w') as of:
+            of.write("#CHROM\tPOS\tID\tREF\tALT\tGENE\tFUNC\tEXONIC_FUNC\tAA_CHANGE\n")
 
             for line in f:
                 #skip comment and description lines
@@ -41,17 +46,32 @@ def main(argv):
                 else:
                     columns = line.split()
                     #check if there is a mutation according to the chosen tissue type [normal|primary]
-                    if myvcflib.mutated(args.tissue_type, columns):
+                    selection = myvcflib.mutated(args.tissue_type, columns) #returns a tuple (boolean, list of values)
+                                        
+                    #if is mutated
+                    if selection[0]:
+                        #values of the selected column
+                        values = selection[1]
 
-                    #values of the normal column
-                    values = columns[9].split(':')
+                        #if base quality, 4th value in the column
+                        #TODO compute the index of base quality
+                        if values[3].isdigit():
+                            bq = int(values[3])
 
-                    #if base quality, 4th value in the column
-                    if values[3].isdigit():
-                        bq = int(values[3])
+                            if bq > args.base_quality:
+                                gene = myvcflib.readGene(columns)
+                                func = myvcflib.readInfo(columns, 3)
+                                exonicf = myvcflib.readInfo(columns, 6)
+                                aachange = myvcflib.readInfo(columns, 7)
 
-                        if bq > args.base_quality:
-                            of.write(line)
+                                new_line = columns[:5]
+                                new_line.append(gene)
+                                new_line.append(func)
+                                new_line.append(exonicf)
+                                new_line.append(aachange)
+
+                                myvcflib.writeToFile(of, new_line)
+                                #of.write(line)
             f.close()
             of.close()
             
