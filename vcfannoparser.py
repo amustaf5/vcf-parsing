@@ -16,14 +16,14 @@ import myvcflib
 #        parser.error("incorrect number of arguments")
 #    hostname = options.hostname
 #    portnum = options.portnum
-    
+
 
 def main(argv):
     parser = argparse.ArgumentParser(usage='%(prog)s [options] arg1 arg2', description='Process vcf files.')
     parser.add_argument('vcf_file', type=str, help='vcf input file')
     parser.add_argument('-t', '--type', type=str, dest='tissue_type', action='store', default="normal", help='selct type of tissue [normal|primary]')
     parser.add_argument('-q', '--base_quality', type=int, dest='base_quality', action='store', default=0, help='filter base quality [int]')
-   
+
     args = parser.parse_args()
     #print 'base quality: %d', args.base_quality
 
@@ -40,6 +40,8 @@ def main(argv):
             of.write("#CHROM\tPOS\tID\tREF\tALT\tGENE\tFUNC\tEXONIC_FUNC\tAA_CHANGE\n")
 
             for line in f:
+                #find the info field of annovar
+                if 
                 #skip comment and description lines
                 if line.startswith('#'):
                     continue
@@ -47,7 +49,7 @@ def main(argv):
                     columns = line.split()
                     #check if there is a mutation according to the chosen tissue type [normal|primary]
                     selection = myvcflib.mutated(args.tissue_type, columns) #returns a tuple (boolean, list of values)
-                                        
+
                     #if is mutated
                     if selection[0]:
                         #values of the selected column
@@ -74,7 +76,7 @@ def main(argv):
                                 #of.write(line)
             f.close()
             of.close()
-            
+
 if __name__=="__main__":
     main(sys.argv[1:])
 
