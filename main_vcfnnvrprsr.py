@@ -1,5 +1,6 @@
 import argparse
 import sys
+import gzip
 
 import VCFAnnovarClass
 
@@ -34,76 +35,17 @@ def main(argv):
     suffix = "_%s_bq%d.out" % (args.tissue_type, args.base_quality)
     outfname = args.vcf_file.split(".vcf")[0] + suffix
 
-    # open the vcf file
-    # read line by line
-    # return only lines with >= base_quality
-    bq = 0
-    flag_info = False
-    info_count = 0
+    if args.vcf_file.endswith(".gz"):
+        with gzip.open(args.vcf_file, 'rb') as f:
+            with gzip.open(outfname + ".gz", 'wb') as of:
+                va.parsing(f, of, args)
 
-    with open(args.vcf_file, 'r') as f:
-        with open(outfname, 'w') as of:
-            # print the pre-defined header to file see def in va class
-            of.write(va.header)
-
-            for line in f:
-                # find the vcf info field
-                if line.startswith(va.start_info):
-                    # counting the info fields
-                    info_count += 1
-
-                if line.startswith(va.start_annovar_info):
-                    flag_info = True
-                    continue
-
-                if line.startswith(va.end_info):
-                    flag_info = False
-                    continue
-
-                if flag_info:
-                    # read the info id and write in dic_info_id
-                    # computing info index = info_count-1
-                    va.dic_info_id[va.readInfoId(line)] = info_count-1
-                    continue
-
-                # skip other comments and description lines
-                if line.startswith('#'):
-                    continue
-                else:
-                    columns = line.split()
-                    # check if there is a mutation according to
-                    # the chosen tissue type [normal|primary]
-                    # returns a tuple (boolean, list of values)
-                    selection = va.mutated(args.tissue_type, columns)
-
-                    # if is mutated
-                    if selection[0]:
-                        # values of the selected column
-                        values = selection[1]
-
-                        # if base quality, 4th value in the column
-                        # TODO compute the index of base quality
-                        if values[3].isdigit():
-                            bq = int(values[3])
-
-                            # if bq greater then selected bq
-                            if bq > args.base_quality:
-                                # read all the first 5 vcf standard field
-                                new_line = columns[:5]
-                                # read all the required info field
-                                new_line.append(
-                                    va.readInfoValue(columns, va.gene))
-                                new_line.append(
-                                    va.readInfoValue(columns, va.func))
-                                new_line.append(
-                                    va.readInfoValue(columns, va.exonicFunc))
-                                new_line.append(
-                                    va.readInfoValue(columns, va.aaChange))
-
-                                va.writeToFile(of, new_line)
-                                # of.write(line)
-            f.close()
-            of.close()
+    elif args.vcf_file.endswith(".vcf"):
+        with open(args.vcf_file, 'r') as f:
+            with open(outfname, 'w') as of:
+                va.parsing(f, of, args)
+    else:
+        print ("unknown file format")
 
 
 if __name__ == "__main__":

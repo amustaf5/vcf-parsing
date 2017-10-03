@@ -6,7 +6,7 @@ class VCFAnnovar(object):
     def __init__(self, name=""):
         self.name = name
 
-        # start tag for the vcf info field    
+        # start tag for the vcf info field   
         self.start_info = "##INFO"
 
         # start-end tag for the info field annovar vcf file
@@ -85,6 +85,77 @@ class VCFAnnovar(object):
     def readInfoId(self, vcf_line):
         '''reads the id value from the comment lines'''
         return vcf_line[len("##INFO=<ID="):].split(",")[0]
+
+    def parsing(self, input_file, output_file, args):
+        '''reads the vcf file line by line writing a custom ouput file
+        according to the arguments args given
+        (return only lines with >= base_quality)
+        '''
+        bq = 0
+        flag_info = False
+        info_count = 0
+
+        # print the pre-defined header to file see def in va class
+        output_file.write(self.header)
+
+        for line in input_file:
+            # find the vcf info field
+            if line.startswith(self.start_info):
+                # counting the info fields
+                info_count += 1
+
+            if line.startswith(self.start_annovar_info):
+                flag_info = True
+                continue
+
+            if line.startswith(self.end_info):
+                flag_info = False
+                continue
+
+            if flag_info:
+                # read the info id and write in dic_info_id
+                # computing info index = info_count-1
+                self.dic_info_id[self.readInfoId(line)] = info_count-1
+                continue
+
+            # skip other comments and description lines
+            if line.startswith('#'):
+                continue
+            else:
+                columns = line.split()
+                # check if there is a mutation according to
+                # the chosen tissue type [normal|primary]
+                # returns a tuple (boolean, list of values)
+                selection = self.mutated(args.tissue_type, columns)
+
+                # if is mutated
+                if selection[0]:
+                    # values of the selected column
+                    values = selection[1]
+
+                    # if base quality, 4th value in the column
+                    # TODO compute the index of base quality
+                    if values[3].isdigit():
+                        bq = int(values[3])
+
+                        # if bq greater then selected bq
+                        if bq > args.base_quality:
+                            # read all the first 5 vcf standard field
+                            new_line = columns[:5]
+                            # read all the required info field
+                            new_line.append(
+                                self.readInfoValue(columns, self.gene))
+                            new_line.append(
+                                self.readInfoValue(columns, self.func))
+                            new_line.append(
+                                self.readInfoValue(columns, self.exonicFunc))
+                            new_line.append(
+                                self.readInfoValue(columns, self.aaChange))
+
+                            self.writeToFile(output_file, new_line)
+                            # of.write(line)
+        input_file.close()
+        output_file.close()
 
     def readGene(self, vcf_row):
         '''reads the Gene field in the annovar annotation field'''
