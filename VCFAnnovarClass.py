@@ -1,4 +1,3 @@
-import sys
 import re
 
 
@@ -6,7 +5,7 @@ class VCFAnnovar(object):
     def __init__(self, name=""):
         self.name = name
 
-        # start tag for the vcf info field   
+        # start tag for the vcf info field
         self.start_info = "##INFO"
 
         # start-end tag for the info field annovar vcf file
@@ -16,6 +15,14 @@ class VCFAnnovar(object):
         # mapping column to tissue_type selection
         self.normal = ("normal", 9)
         self.primary = ("primary", 10)
+
+        # frequency field to filter (!!!different for each annotation)
+        self.frequency_id = ("ALL.sites.2015_08")
+        # self.frequency_id = ("ExAC_ALL") # luad
+
+        # quality filed to filter
+        self.quality = ("BQ", 3)
+        # self.quality = ("GQ", 1) # luad
 
         # mapping info_ID elements to read
         self.func = "Func.refGene"
@@ -133,13 +140,24 @@ class VCFAnnovar(object):
                     # values of the selected column
                     values = selection[1]
 
+                    # frequency filtering read value
+                    freq = 0
+                    try:
+                        freq = float(self.readInfoValue(columns,
+                                                        self.frequency_id))
+                    except ValueError:
+                        # assuming value zero for null values "."
+                        freq = 0.0
+
                     # if base quality, 4th value in the column
                     # TODO compute the index of base quality
-                    if values[3].isdigit():
-                        bq = int(values[3])
+                    if values[self.quality[1]].isdigit():
+                        bq = int(values[self.quality[1]])
 
                         # if bq greater then selected bq
-                        if bq > args.base_quality:
+                        if bq > args.base_quality \
+                           and freq > args.mutation_frequency:
+
                             # read all the first 5 vcf standard field
                             new_line = columns[:5]
                             # read all the required info field

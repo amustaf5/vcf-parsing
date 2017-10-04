@@ -1,6 +1,7 @@
 import argparse
 import sys
 import gzip
+from os.path import basename, join
 
 import VCFAnnovarClass
 
@@ -25,15 +26,35 @@ def main(argv):
                         action='store',
                         default=0,
                         help='filter base quality [int]')
+    parser.add_argument('-f',
+                        '--mutation_frequency',
+                        type=float,
+                        dest='mutation_frequency',
+                        action='store',
+                        default=0.0,
+                        help='filter mutation frequency [float]')
+    parser.add_argument('--out',
+                        type=str,
+                        dest='out_dir',
+                        action='store',
+                        help='path of the output folder')
 
     args = parser.parse_args()
 
     # initiate the VCFAnnovar class object
     va = VCFAnnovarClass.VCFAnnovar(args.vcf_file)
 
-    # create a output file name
-    suffix = "_%s_bq%d.out" % (args.tissue_type, args.base_quality)
-    outfname = args.vcf_file.split(".vcf")[0] + suffix
+    # create a output log file info
+    log_sting = ("tissue type= %s \n"
+                 "base quality= %d \n"
+                 "mutation frequency= %.2f \n") \
+        % (args.tissue_type,
+           args.base_quality,
+           args.mutation_frequency)
+    open(join(args.out_dir, "log.out"), 'w').write(log_sting)
+
+    suffix = ".out"
+    outfname = join(args.out_dir, basename(args.vcf_file) + suffix)
 
     if args.vcf_file.endswith(".gz"):
         with gzip.open(args.vcf_file, 'rb') as f:
