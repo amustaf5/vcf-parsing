@@ -18,7 +18,7 @@ def main(argv):
                         dest='tissue_type',
                         action='store',
                         default="normal",
-                        help='selct type of tissue [normal|primary]')
+                        help='selct type of tissue [normal|tumor]')
     parser.add_argument('-q',
                         '--base_quality',
                         type=int,
@@ -33,6 +33,25 @@ def main(argv):
                         action='store',
                         default=0.0,
                         help='filter mutation frequency [float]')
+    parser.add_argument('--GPV',
+                        type=float,
+                        dest='gpv_threshold',
+                        action='store',
+                        default=0.0,
+                        help='filter germline mutation p-value  [float]')
+    parser.add_argument('--SPV',
+                        type=float,
+                        dest='spv_threshold',
+                        action='store',
+                        default=0.0,
+                        help='filter somatic mutation p-value [float]')
+    parser.add_argument('-a',
+                        '--AAFreq',
+                        type=float,
+                        dest='allele_freq_threshold',
+                        action='store',
+                        default=0.0,
+                        help='filter allele frequency percentage [float]')
     parser.add_argument('--out',
                         type=str,
                         dest='out_dir',
@@ -47,10 +66,16 @@ def main(argv):
     # create a output log file info
     log_sting = ("tissue type= %s \n"
                  "base quality= %d \n"
-                 "mutation frequency= %.2f \n") \
+                 "mutation frequency= %.2f \n"
+                 "GPV= %.2f \n"
+                 "SPV= %.2f \n"
+                 "allele freq= %.2f \n") \
         % (args.tissue_type,
            args.base_quality,
-           args.mutation_frequency)
+           args.mutation_frequency,
+           args.gpv_threshold,
+           args.spv_threshold,
+           args.allele_freq_threshold)
     open(join(args.out_dir, "log.out"), 'w').write(log_sting)
 
     suffix = ".out"
