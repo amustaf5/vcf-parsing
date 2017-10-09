@@ -16,11 +16,7 @@ class VCFAnnovar(object):
         self.normal = ("normal", 9)
         self.tumor = ("tumor", 10)
 
-        # frequency field to filter (!!!different for each annotation)
-        # self.frequency_id = ("ALL.sites.2015_08")
-        # self.frequency_id = ("ExAC_ALL") # luad
-
-        # mappinf format ID elements to index
+        # mapping format ID elements to index
         self.allele_freq = ("FREQ", 5)
         # quality filed to filter
         # self.quality = ("BQ", 3)
@@ -42,7 +38,7 @@ class VCFAnnovar(object):
         self.onet_genome = "1000g2015aug_all"
 
         # dictionary mapping current vcf annovar file info IDs to index
-        self.dic_info_id = {}
+        self.dic_info = {}
 
         # index of the colon info (!!!Assuming 8th column)
         self.col_info_index = 7
@@ -94,33 +90,26 @@ class VCFAnnovar(object):
         # return also column values to process further
         return ismutated, selected_column_list
 
-    def readInfoValueEx(self, vcf_row, info_id):
+    def readInfoValue(self, info_id):
         '''reads the value of corresponding info id in current
-        vcf row (array of splitted columns)
-        wich is an array of values(columns)
+        vcf row loaded in the dictionary
         '''
-        val = vcf_row[self.col_info_index] \
-            .split(self.info_separator)[self.dic_info_id[info_id]] \
-            .split("=")[1]
-        return val
+        return self.dic_info[info_id]
 
-    def readInfoValue(self, vcf_row, info_id):
-        '''reads the value of corresponding info id in current
-        vcf row (array of splitted columns)
-        wich is an array of values(columns)
-        '''
+    def loadInfoDictionary(self, vcf_row):
+        '''reads id and values from info column and creates a dictionary'''
+        # clean dictionary each time
+        self.dic_info = {}
+        # list of info id=values
         info_l = vcf_row[self.col_info_index].split(self.info_separator)
-        index = self.dic_info_id[info_id]
-        # !!!temporary patch
-        if info_l[self.dic_info_id["SOMATIC"]] != "SOMATIC":
-            if index > self.dic_info_id["SOMATIC"]:
-                index = index - 1
+        for field in info_l:
+            key_val = field.split("=")
+            # if there is a value
+            # considering flag type field do not have a value (e.g. SOMATIC)
+            if len(key_val) > 1:
+                self.dic_info[key_val[0]] = key_val[1]
 
-        val = vcf_row[self.col_info_index] \
-            .split(self.info_separator)[index] \
-            .split("=")[1]
-
-        return val
+        return
 
     def readInfoId(self, vcf_line):
         '''reads the id value from the comment lines'''
@@ -144,9 +133,9 @@ class VCFAnnovar(object):
         else:
             # create a list with the three frequncy value considered
             l_freq = []
-            f1 = self.readInfoValue(vcf_row, self.gnomAD_genome_ALL)
-            f2 = self.readInfoValue(vcf_row, self.onet_genome)
-            f3 = self.readInfoValue(vcf_row, self.exAC_ALL)
+            f1 = self.readInfoValue(self.gnomAD_genome_ALL)
+            f2 = self.readInfoValue(self.onet_genome)
+            f3 = self.readInfoValue(self.exAC_ALL)
 
             # check if there is a point (null value) or a value
             # convert all to float
@@ -177,7 +166,7 @@ class VCFAnnovar(object):
             res = True
         else:
             # reads the value of GPV from current line (vcf_row)
-            gpv_ = self.readInfoValue(vcf_row, self.gpv)
+            gpv_ = self.readInfoValue(self.gpv)
             if gpv_ != self.null:
                 if float(gpv_) < gpv_threshold:
                     res = True
@@ -193,7 +182,7 @@ class VCFAnnovar(object):
             res = True
         else:
             # reads the value of SPV from current line (vcf_row)
-            spv_ = self.readInfoValue(vcf_row, self.spv)
+            spv_ = self.readInfoValue(self.spv)
             if spv_ != self.null:
                 if float(spv_) < spv_threshold:
                     res = True
@@ -238,21 +227,10 @@ class VCFAnnovar(object):
         according to the arguments args given
         (return only lines with >= base_quality)
         '''
-        info_count = 0
-
         # print the pre-defined header to file see def in va class
         output_file.write(self.header)
 
         for line in input_file:
-            # find the vcf info field
-            # skipping the info field typed Flag ..
-            # given that do not contain a value (no more! 08/10)
-            if line.startswith(self.start_info):
-                self.dic_info_id[self.readInfoId(line)] = info_count
-                # counting the info fields
-                info_count += 1
-                continue
-
             # skip other comments and description lines
             if line.startswith('#'):
                 continue
@@ -268,6 +246,9 @@ class VCFAnnovar(object):
                     # values of the selected column
                     format_values = selection[1]
 
+                    # read all the info id=value in self.dic_info
+                    self.loadInfoDictionary(columns)
+
                     # TODO compute the index of base quality
                     # if bq greater then selected bq
                     if self.checkQuality(format_values, args.base_quality) \
@@ -282,24 +263,24 @@ class VCFAnnovar(object):
                         new_line = columns[:5]
                         # read all the required info field
                         new_line.append(
-                            self.readInfoValue(columns, self.gene))
+                            self.readInfoValue(self.gene))
                         new_line.append(
-                            self.readInfoValue(columns, self.func))
+                            self.readInfoValue(self.func))
                         new_line.append(
-                            self.readInfoValue(columns, self.exonicFunc))
+                            self.readInfoValue(self.exonicFunc))
                         new_line.append(
-                            self.readInfoValue(columns, self.aaChange))
+                            self.readInfoValue(self.aaChange))
                         new_line.append(
-                            self.readInfoValue(columns, self.gnomAD_genome_ALL))
+                            self.readInfoValue(self.gnomAD_genome_ALL))
                         new_line.append(
-                            self.readInfoValue(columns, self.onet_genome))
+                            self.readInfoValue(self.onet_genome))
                         new_line.append(
-                            self.readInfoValue(columns, self.exAC_ALL))
+                            self.readInfoValue(self.exAC_ALL))
                         # non-annovar vcf info fields
                         new_line.append(
-                            self.readInfoValue(columns, self.gpv))
+                            self.readInfoValue(self.gpv))
                         new_line.append(
-                            self.readInfoValue(columns, self.spv))
+                            self.readInfoValue(self.spv))
                         # vcf format field
                         new_line.append(format_values[self.allele_freq[1]])
 

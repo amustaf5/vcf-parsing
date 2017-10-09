@@ -66,10 +66,10 @@ def main(argv):
     # create a output log file info
     log_sting = ("tissue type= %s \n"
                  "base quality= %d \n"
-                 "mutation frequency= %.2f \n"
-                 "GPV= %.2f \n"
-                 "SPV= %.2f \n"
-                 "allele freq= %.2f \n") \
+                 "mutation frequency= %.4f \n"
+                 "GPV= %.4e \n"
+                 "SPV= %.4e \n"
+                 "allele freq= %.4f \n") \
         % (args.tissue_type,
            args.base_quality,
            args.mutation_frequency,
