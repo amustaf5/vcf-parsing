@@ -94,7 +94,7 @@ class VCFAnnovar(object):
         # return also column values to process further
         return ismutated, selected_column_list
 
-    def readInfoValue(self, vcf_row, info_id):
+    def readInfoValueEx(self, vcf_row, info_id):
         '''reads the value of corresponding info id in current
         vcf row (array of splitted columns)
         wich is an array of values(columns)
@@ -102,6 +102,24 @@ class VCFAnnovar(object):
         val = vcf_row[self.col_info_index] \
             .split(self.info_separator)[self.dic_info_id[info_id]] \
             .split("=")[1]
+        return val
+
+    def readInfoValue(self, vcf_row, info_id):
+        '''reads the value of corresponding info id in current
+        vcf row (array of splitted columns)
+        wich is an array of values(columns)
+        '''
+        info_l = vcf_row[self.col_info_index].split(self.info_separator)
+        index = self.dic_info_id[info_id]
+        # !!!temporary patch
+        if info_l[self.dic_info_id["SOMATIC"]] != "SOMATIC":
+            if index > self.dic_info_id["SOMATIC"]:
+                index = index - 1
+
+        val = vcf_row[self.col_info_index] \
+            .split(self.info_separator)[index] \
+            .split("=")[1]
+
         return val
 
     def readInfoId(self, vcf_line):
@@ -132,12 +150,15 @@ class VCFAnnovar(object):
 
             # check if there is a point (null value) or a value
             # convert all to float
-            if f1 != self.null:
-                l_freq.append(float(f1))
-            if f2 != self.null:
-                l_freq.append(float(f2))
-            if f3 != self.null:
-                l_freq.append(float(f3))
+            try:
+                if f1 != self.null:
+                    l_freq.append(float(f1))
+                if f2 != self.null:
+                    l_freq.append(float(f2))
+                if f3 != self.null:
+                    l_freq.append(float(f3))
+            except ValueError:
+                print ("error in file: %s") % self.name
 
             # get the max compare return ture or false
             # possibile to have all empty values
@@ -225,9 +246,8 @@ class VCFAnnovar(object):
         for line in input_file:
             # find the vcf info field
             # skipping the info field typed Flag ..
-            # given that do not contain a value
-            if line.startswith(self.start_info) \
-               and self.readInfoType(line) != "Flag":
+            # given that do not contain a value (no more! 08/10)
+            if line.startswith(self.start_info):
                 self.dic_info_id[self.readInfoId(line)] = info_count
                 # counting the info fields
                 info_count += 1
