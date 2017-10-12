@@ -26,6 +26,18 @@ def main(argv):
                         action='store',
                         default=0,
                         help='filter base quality [int]')
+    parser.add_argument('--DP',
+                        type=int,
+                        dest='read_depth_arg',
+                        action='store',
+                        default=0,
+                        help='filter read depth [int]')
+    parser.add_argument('--AD',
+                        type=int,
+                        dest='variant_depth_arg',
+                        action='store',
+                        default=0,
+                        help='filter variant depth[int]')
     parser.add_argument('-f',
                         '--mutation_frequency',
                         type=float,
@@ -56,6 +68,7 @@ def main(argv):
                         type=str,
                         dest='out_dir',
                         action='store',
+                        default='.',
                         help='path of the output folder')
 
     args = parser.parse_args()
