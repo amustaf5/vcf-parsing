@@ -99,12 +99,15 @@ class VCFAnnovar(object):
         res = self.dic_info[info_id]
 
         if info_id == self.aaChange:
-            # get the list of the different changes (trascripts)
-            transcript_l = re.findall("NM_[0-9]*", res)
-            mutation_l = re.findall("p\.[A-Z0-9]*", res)
-            # formatting a two column string with multiple values
-            # separated by comma "," col transcript and col mutation
-            res = ",".join(transcript_l) + "\t" + ",".join(mutation_l)
+            if res != self.null:
+                # get the list of the different changes (trascripts)
+                transcript_l = re.findall("NM_[0-9]*", res)
+                mutation_l = re.findall("p\.[A-Z0-9]*", res)
+                # formatting a two column string with multiple values
+                # separated by comma "," col transcript and col mutation
+                res = ",".join(transcript_l) + "\t" + ",".join(mutation_l)
+            else:
+                res = ".\t."
 
         return res
 
