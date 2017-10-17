@@ -6,7 +6,7 @@ from os.path import basename, join
 import VCFAnnovarClass
 
 
-def main(argv):
+def vcfnnvrprsr(argv):
     parser = argparse.ArgumentParser(usage='%(prog)s [options] arg1 arg2',
                                      description='Process vcf files.')
     parser.add_argument('vcf_file',
@@ -82,12 +82,16 @@ def main(argv):
                  "mutation frequency= %.4f \n"
                  "GPV= %.4e \n"
                  "SPV= %.4e \n"
+                 "read depth (DP)= %d \n"
+                 "variant depth (AD)= %d \n"
                  "allele freq= %.4f \n") \
         % (args.tissue_type,
            args.base_quality,
            args.mutation_frequency,
            args.gpv_threshold,
            args.spv_threshold,
+           args.read_depth_arg,
+           args.variant_depth_arg,
            args.allele_freq_threshold)
     open(join(args.out_dir, "log.out"), 'w').write(log_sting)
 
@@ -108,4 +112,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    vcfnnvrprsr(sys.argv[1:])
