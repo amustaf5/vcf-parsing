@@ -17,6 +17,8 @@ class VCFAnnovar(object):
         self.tumor = ("tumor", 10)
 
         # mapping format ID elements to index
+        self.read_depth = ("DP", 2)
+        self.variant_depth = ("AD", 4)
         self.allele_freq = ("FREQ", 5)
         # quality filed to filter
         # self.quality = ("BQ", 3)
@@ -51,7 +53,7 @@ class VCFAnnovar(object):
 
         # header line of the output file
         self.header = "#CHROM\tPOS\tID\tREF\tALT\t" \
-            + "GENE\tFUNC\tEXONIC_FUNC\tAA_CHANGE\t" \
+            + "GENE\tFUNC\tEXONIC_FUNC\tTRANSCRIPT\tMUTATION\t" \
             + "GgnomAD_genome_ALL\t1000g2015aug_all\tExAC_ALL\t" \
             + "GPV\tSPV\tALLELE_FREQ\n"
 
@@ -94,7 +96,20 @@ class VCFAnnovar(object):
         '''reads the value of corresponding info id in current
         vcf row loaded in the dictionary
         '''
-        return self.dic_info[info_id]
+        res = self.dic_info[info_id]
+
+        if info_id == self.aaChange:
+            if res != self.null:
+                # get the list of the different changes (trascripts)
+                transcript_l = re.findall("NM_[0-9]*", res)
+                mutation_l = re.findall("p\.[A-Z0-9]*", res)
+                # formatting a two column string with multiple values
+                # separated by comma "," col transcript and col mutation
+                res = ",".join(transcript_l) + "\t" + ",".join(mutation_l)
+            else:
+                res = ".\t."
+
+        return res
 
     def loadInfoDictionary(self, vcf_row):
         '''reads id and values from info column and creates a dictionary'''
@@ -152,7 +167,7 @@ class VCFAnnovar(object):
             # get the max compare return ture or false
             # possibile to have all empty values
             if len(l_freq) != 0:
-                if max(l_freq) > frequency_threshold:
+                if max(l_freq) < frequency_threshold:
                     res = True
 
         return res
@@ -185,6 +200,38 @@ class VCFAnnovar(object):
             spv_ = self.readInfoValue(self.spv)
             if spv_ != self.null:
                 if float(spv_) < spv_threshold:
+                    res = True
+
+        return res
+
+    def checkReadDepth(self, format_values, read_depth_arg):
+        '''check if the read depth of the sample in the given
+        column format_values (normal or tumor) is
+        or equal then the given read_depth value
+        '''
+        res = False
+        if read_depth_arg == 0:
+            res = True
+        else:
+            read_depth_ = format_values[self.read_depth[1]]
+            if read_depth_ != self.null:
+                if int(read_depth_) >= read_depth_arg:
+                    res = True
+
+        return res
+
+    def checkVariantDepth(self, format_values, variant_depth_arg):
+        '''check if the variant depth of the sample in the given
+        column format_values (normal or tumor) is greater
+        or equal then the given variant_depth value
+        '''
+        res = False
+        if variant_depth_arg == 0:
+            res = True
+        else:
+            variant_depth_ = format_values[self.variant_depth[1]]
+            if variant_depth_ != self.null:
+                if int(variant_depth_) >= variant_depth_arg:
                     res = True
 
         return res
@@ -257,7 +304,11 @@ class VCFAnnovar(object):
                        and self.checkGPV(columns, args.gpv_threshold) \
                        and self.checkSPV(columns, args.spv_threshold) \
                        and self.checkAlleleFreq(format_values,
-                                                args.allele_freq_threshold):
+                                                args.allele_freq_threshold) \
+                       and self.checkReadDepth(format_values,
+                                               args.read_depth_arg) \
+                       and self.checkVariantDepth(format_values,
+                                                  args.variant_depth_arg):
 
                         # read all the first 5 vcf standard field
                         new_line = columns[:5]
@@ -283,6 +334,10 @@ class VCFAnnovar(object):
                             self.readInfoValue(self.spv))
                         # vcf format field
                         new_line.append(format_values[self.allele_freq[1]])
+
+                        # !!!TEMP TESTING (not showing in output file)
+                        # new_line.append(format_values[self.read_depth[1]])
+                        # new_line.append(format_values[self.variant_depth[1]])
 
                         self.writeToFile(output_file, new_line)
                         # of.write(line)
