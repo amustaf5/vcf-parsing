@@ -17,6 +17,7 @@ class VCFAnnovar(object):
         self.tumor = ("tumor", 10)
 
         # mapping format ID elements to index
+        self.genotype = ("GT", 0)
         self.read_depth = ("DP", 2)
         self.variant_depth = ("AD", 4)
         self.allele_freq = ("FREQ", 5)
@@ -51,11 +52,14 @@ class VCFAnnovar(object):
         # null or absent value
         self.null = "."
 
+        # output columns separator
+        self.col_sep = "\t"  # 4*" "
+
         # header line of the output file
         self.header = "#CHROM\tPOS\tID\tREF\tALT\t" \
             + "GENE\tFUNC\tEXONIC_FUNC\tTRANSCRIPT\tMUTATION\t" \
             + "GgnomAD_genome_ALL\t1000g2015aug_all\tExAC_ALL\t" \
-            + "GPV\tSPV\tALLELE_FREQ\n"
+            + "GPV\tSPV\tTUMOR(GT:AD:FREQ)\tNORMAL(GT:AD:FREQ)\n"
 
     def startInfo(self, vcf_line):
         '''startInfo(self, vcf_line)
@@ -105,9 +109,20 @@ class VCFAnnovar(object):
                 mutation_l = re.findall("p\.[A-Z0-9]*", res)
                 # formatting a two column string with multiple values
                 # separated by comma "," col transcript and col mutation
-                res = ",".join(transcript_l) + "\t" + ",".join(mutation_l)
+                tmp = ",".join(transcript_l) \
+                    + self.col_sep \
+                    + ",".join(mutation_l)
+
+                # checking if the resulting string is empty or better
+                # equal to the col separator due to unexpected
+                # string values or format as "UNKNOWN" string
+                # NB: join of empty list returns empty string
+                if tmp == self.col_sep:
+                    res = res + self.col_sep + res
+                else:
+                    res = tmp
             else:
-                res = ".\t."
+                res = "." + self.col_sep + "."
 
         return res
 
@@ -286,6 +301,94 @@ class VCFAnnovar(object):
                 # check if there is a mutation according to
                 # the chosen tissue type [normal|tumor]
                 # returns a tuple (boolean, list of values)
+                # assuming default value as tumor
+                selection_tumor = self.mutated(self.tumor[0], columns)
+                selection_normal = self.mutated(self.normal[0], columns)
+
+                # if is mutated at least one of the two tissues
+                if selection_tumor[0] or selection_normal[0]:
+                    # values of the tumor column
+                    tumor_values = selection_tumor[1]
+                    normal_values = selection_normal[1]
+
+                    # read all the info id=value in self.dic_info
+                    self.loadInfoDictionary(columns)
+
+                    # TODO compute the index of base quality
+                    # if bq greater then selected bq
+                    # and others check filter values
+                    if self.checkQuality(tumor_values, args.base_quality) \
+                       and self.checkFrequency(columns,
+                                               args.mutation_frequency) \
+                       and self.checkGPV(columns, args.gpv_threshold) \
+                       and self.checkSPV(columns, args.spv_threshold) \
+                       and self.checkAlleleFreq(tumor_values,
+                                                args.allele_freq_threshold) \
+                       and self.checkReadDepth(tumor_values,
+                                               args.read_depth_arg) \
+                       and self.checkVariantDepth(tumor_values,
+                                                  args.variant_depth_arg):
+
+                        # read all the first 5 vcf standard field
+                        new_line = columns[:5]
+                        # read all the required info field
+                        new_line.append(
+                            self.readInfoValue(self.gene))
+                        new_line.append(
+                            self.readInfoValue(self.func))
+                        new_line.append(
+                            self.readInfoValue(self.exonicFunc))
+                        new_line.append(
+                            self.readInfoValue(self.aaChange))
+                        new_line.append(
+                            self.readInfoValue(self.gnomAD_genome_ALL))
+                        new_line.append(
+                            self.readInfoValue(self.onet_genome))
+                        new_line.append(
+                            self.readInfoValue(self.exAC_ALL))
+                        # non-annovar vcf info fields
+                        new_line.append(
+                            self.readInfoValue(self.gpv))
+                        new_line.append(
+                            self.readInfoValue(self.spv))
+                        # vcf format field
+                        # tumor column
+                        new_line.append(
+                            ":".join([tumor_values[self.genotype[1]],
+                                      tumor_values[self.variant_depth[1]],
+                                      tumor_values[self.allele_freq[1]]]))
+                        # normal column
+                        new_line.append(
+                            ":".join([normal_values[self.genotype[1]],
+                                      normal_values[self.variant_depth[1]],
+                                      normal_values[self.allele_freq[1]]]))
+
+                        # !!!TEMP TESTING (not showing in output file)
+                        # new_line.append(tumor_values[self.read_depth[1]])
+                        # new_line.append(tumor_values[self.variant_depth[1]])
+
+                        self.writeToFile(output_file, new_line)
+                        # of.write(line)
+        input_file.close()
+        output_file.close()
+
+    def parsing_(self, input_file, output_file, args):
+        '''reads the vcf file line by line writing a custom ouput file
+        according to the arguments args given
+        (return only lines with >= base_quality)
+        '''
+        # print the pre-defined header to file see def in va class
+        output_file.write(self.header)
+
+        for line in input_file:
+            # skip other comments and description lines
+            if line.startswith('#'):
+                continue
+            else:
+                columns = line.split()
+                # check if there is a mutation according to
+                # the chosen tissue type [normal|tumor]
+                # returns a tuple (boolean, list of values)
                 selection = self.mutated(args.tissue_type, columns)
 
                 # if is mutated
@@ -362,6 +465,6 @@ class VCFAnnovar(object):
     def writeToFile(self, out_file, vcf_cols):
         line = ""
         for c in vcf_cols:
-            line += c + "\t"
+            line += c + self.col_sep
 
         out_file.write(line+"\n")

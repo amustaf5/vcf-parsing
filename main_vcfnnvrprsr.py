@@ -17,7 +17,7 @@ def vcfnnvrprsr(argv):
                         type=str,
                         dest='tissue_type',
                         action='store',
-                        default="normal",
+                        default="tumor",
                         help='selct type of tissue [normal|tumor]')
     parser.add_argument('-q',
                         '--base_quality',
@@ -77,22 +77,22 @@ def vcfnnvrprsr(argv):
     va = VCFAnnovarClass.VCFAnnovar(args.vcf_file)
 
     # create a output log file info
-    log_sting = ("tissue type= %s \n"
-                 "base quality= %d \n"
-                 "mutation frequency= %.4f \n"
-                 "GPV= %.4e \n"
-                 "SPV= %.4e \n"
-                 "read depth (DP)= %d \n"
-                 "variant depth (AD)= %d \n"
-                 "allele freq= %.4f \n") \
-        % (args.tissue_type,
-           args.base_quality,
-           args.mutation_frequency,
-           args.gpv_threshold,
-           args.spv_threshold,
-           args.read_depth_arg,
-           args.variant_depth_arg,
-           args.allele_freq_threshold)
+    log_sting = ("tissue type= {:s} \n"
+                 "base quality= {:d} \n"
+                 "mutation frequency= {:.4f} \n"
+                 "GPV= {:.4e} \n"
+                 "SPV= {:.4e} \n"
+                 "read depth (DP)= {:d} \n"
+                 "variant depth (AD)= {:d} \n"
+                 "allele freq= {:.2f}% \n") \
+        .format(args.tissue_type,
+                args.base_quality,
+                args.mutation_frequency,
+                args.gpv_threshold,
+                args.spv_threshold,
+                args.read_depth_arg,
+                args.variant_depth_arg,
+                args.allele_freq_threshold)
     open(join(args.out_dir, "log.out"), 'w').write(log_sting)
 
     suffix = ".out"
