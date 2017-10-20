@@ -102,6 +102,8 @@ class VCFAnnovar(object):
         '''
         res = self.dic_info[info_id]
 
+        # handle the specific case of AAChange field to be splitted in
+        # transcript and mutation columns
         if info_id == self.aaChange:
             if res != self.null:
                 # get the list of the different changes (trascripts)
@@ -113,16 +115,23 @@ class VCFAnnovar(object):
                     + self.col_sep \
                     + ",".join(mutation_l)
 
+                if len(transcript_l) > 0 and len(mutation_l) > 0:
+                    res = tmp
+                # there is also possibile to have a transcript
+                # but not a mutation and viceversa
+                elif len(transcript_l) == 0 and len(mutation_l) > 0:
+                    res = "not_found" + tmp
+                elif len(transcript_l) > 0 and len(mutation_l) == 0:
+                    res = tmp + "not_found"
                 # checking if the resulting string is empty or better
                 # equal to the col separator due to unexpected
                 # string values or format as "UNKNOWN" string
                 # NB: join of empty list returns empty string
-                if tmp == self.col_sep:
-                    res = res + self.col_sep + res
+                # elif tmp == self.col_sep:
                 else:
-                    res = tmp
+                    res = res + self.col_sep + res
             else:
-                res = "." + self.col_sep + "."
+                res = self.null + self.col_sep + self.null
 
         return res
 
