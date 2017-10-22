@@ -59,7 +59,7 @@ class VCFAnnovar(object):
         self.header = "#CHROM\tPOS\tID\tREF\tALT\t" \
             + "GENE\tFUNC\tEXONIC_FUNC\tTRANSCRIPT\tMUTATION\t" \
             + "GgnomAD_genome_ALL\t1000g2015aug_all\tExAC_ALL\t" \
-            + "GPV\tSPV\tTUMOR(GT:AD:FREQ)\tNORMAL(GT:AD:FREQ)\n"
+            + "GPV\tSPV\tNORMAL(GT:AD:FREQ)\tTUMOR(GT:AD:FREQ)\n"
 
     def startInfo(self, vcf_line):
         '''startInfo(self, vcf_line)
@@ -361,17 +361,16 @@ class VCFAnnovar(object):
                         new_line.append(
                             self.readInfoValue(self.spv))
                         # vcf format field
-                        # tumor column
-                        new_line.append(
-                            ":".join([tumor_values[self.genotype[1]],
-                                      tumor_values[self.variant_depth[1]],
-                                      tumor_values[self.allele_freq[1]]]))
                         # normal column
                         new_line.append(
                             ":".join([normal_values[self.genotype[1]],
                                       normal_values[self.variant_depth[1]],
                                       normal_values[self.allele_freq[1]]]))
-
+                        # tumor column
+                        new_line.append(
+                            ":".join([tumor_values[self.genotype[1]],
+                                      tumor_values[self.variant_depth[1]],
+                                      tumor_values[self.allele_freq[1]]]))
                         # !!!TEMP TESTING (not showing in output file)
                         # new_line.append(tumor_values[self.read_depth[1]])
                         # new_line.append(tumor_values[self.variant_depth[1]])
