@@ -1,4 +1,6 @@
 import re
+import gzip
+from os.path import join
 
 
 class VCFAnnovar(object):
@@ -12,6 +14,9 @@ class VCFAnnovar(object):
         # start-end tag for the info field annovar vcf file
         self.start_annovar_info = "##INFO=<ID=ANNOVAR_DATE,"
         self.end_info = "##INFO=<ID=ALLELE_END,"
+
+        # start tag for the table header
+        self.start_header = "#CHROM"
 
         # mapping info_ID elements to read
         self.func = "Func.refGene"
@@ -204,7 +209,6 @@ class VCFAnnovar(object):
         input_file.close()
         output_file.close()
 
-
     def parsingSTD(self, input_file, args):
         '''STDOUT ver. reads the pre-processed vcf file derived by
         1kgenomes chromosome files line by line writing a custom ouput file
@@ -257,6 +261,84 @@ class VCFAnnovar(object):
                                 self.readInfoValue(self.exAC_ALL, gt_i))
 
                             self.writeToSTDOUT(new_line)
+        input_file.close()
+
+    def parsingChr(self, input_file, out_dir, pop_frequency):
+        '''reads the original chromosome vcf file line by line splitting
+        it to custom ouput files (one for each patient columns)
+        according to the arguments args given
+        '''
+
+        # print the pre-defined header to file see def in va class
+        # print(self.header)
+        out_files = []
+
+        for line in input_file:
+            # skip comments and description lines
+            if line.startswith('##'):
+                continue
+
+            # if reading the header line
+            elif line.startswith(self.start_header):
+                # save the patient list starting from col $10 to the end
+                pz_list = line.split()[self.col_GT_index:]
+                # open in append a file for each pz
+                out_files = map(lambda t:
+                                gzip.open(join(out_dir, t + ".out.gz"), 'ab'),
+                                pz_list)
+
+            else:
+                columns = line.split()
+
+                # read all the info id=value in self.dic_info
+                self.loadInfoDictionary(columns)
+
+                for i in range(len(pz_list)):
+                    # reading the gt value from the column considering that
+                    # some columns may have additional information
+                    # separated by ":"
+                    GT = columns[self.col_GT_index + i].split(":")[0]
+
+                    # if there is no mutation or null value for the current pz
+                    # skip to the next column or pz
+                    if re.match("^0$|0\|0|\.", GT):
+                        continue
+
+                    # considering multiple GT values corresponding
+                    # to multiple annovar fields
+                    # using set in order to take just once the value
+                    # in case of "1|1" gt type
+                    for gt_i in set(GT.split("|")):
+                        gt_i = int(gt_i)
+                        # if there is a mutation
+                        if gt_i > 0:
+                            gt_i = gt_i - 1
+                            # filtering population frequency
+                            if self.checkFrequency(gt_i, pop_frequency):
+                                # read all the first 4 vcf standard field
+                                new_line = columns[:4]
+                                # read the corresponding ALT field
+                                new_line.append(columns[4].split(",")[gt_i])
+                                # read all the required info field
+                                new_line.append(
+                                    self.readInfoValue(self.gene, gt_i))
+                                new_line.append(
+                                    self.readInfoValue(self.func, gt_i))
+                                new_line.append(
+                                    self.readInfoValue(self.exonicFunc, gt_i))
+                                new_line.append(
+                                    self.readInfoValue(self.aaChange, gt_i))
+                                new_line.append(
+                                    self.readInfoValue(self.gnomAD_genome_ALL,
+                                                       gt_i))
+                                new_line.append(
+                                    self.readInfoValue(self.onet_genome, gt_i))
+                                new_line.append(
+                                    self.readInfoValue(self.exAC_ALL, gt_i))
+
+                                self.writeToFile(out_files[i], new_line)
+
+        map(lambda t: t.close(), out_files)
         input_file.close()
 
     def writeToFile(self, out_file, vcf_cols):

@@ -2,6 +2,7 @@
 
 import sys
 import gzip
+from os import listdir
 from os.path import basename, join
 
 
@@ -34,23 +35,27 @@ def checkFrequency(freq_list, freq_threshold, null_value="."):
     return res
 
 
-in_file = sys.argv[1]
+#in_file = sys.argv[1]
+in_dir = sys.argv[1]
 freq = float(sys.argv[2])
 out_dir = sys.argv[3]
 
-out_file = join(out_dir, basename(in_file))
+for f in listdir(in_dir):
+    out_file = join(out_dir, basename(f))
+    in_file = join(in_dir, f)
 
-with gzip.open(in_file, 'rb') as f:
-    with gzip.open(out_file, 'wb') as of:
-        for line in f:
-            if line.startswith("#"):
-                continue
-            cols = line.strip().split()
-            # get three values of freq from proper columns
-            freq_list = [cols[10], cols[11], cols[12]]
+    if in_file.endswith(".gz"):
+        with gzip.open(in_file, 'rb') as f:
+            with gzip.open(out_file, 'wb') as of:
+                for line in f:
+                    if line.startswith("#"):
+                        continue
+                    cols = line.strip().split()
+                    # get three values of freq from proper columns
+                    freq_list = [cols[10], cols[11], cols[12]]
 
-            if checkFrequency(freq_list, freq):
-                of.write(line)
+                    if checkFrequency(freq_list, freq):
+                        of.write(line)
 
-        f.close()
-        of.close()
+                f.close()
+                of.close()
