@@ -17,11 +17,11 @@ def commonGenes(file_exp1, file_exp2, index=3):
 
     for line in open(file_exp1, 'r'):
         g = line.split()
-        d_exp1[g[0]] = int(g[index])
+        d_exp1[g[0]] = float(g[index])
 
     for line in open(file_exp2, 'r'):
         g = line.split()
-        d_exp2[g[0]] = int(g[index])
+        d_exp2[g[0]] = float(g[index])
 
     # compute the intersection of the keys of the two dictionay (common values)
     keys_common = set(d_exp1.keys()).intersection(d_exp2.keys())

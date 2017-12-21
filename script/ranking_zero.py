@@ -31,9 +31,9 @@ def computeCorrelation(f_exp1, f_exp2, index=3):
     '''
 
     # taking the column at index of each row of the input file
-    x_ = list(map(lambda t: int(t.split()[index]),
+    x_ = list(map(lambda t: float(t.split()[index]),
                   open(f_exp1, 'r').readlines()))
-    y_ = list(map(lambda t: int(t.split()[index]),
+    y_ = list(map(lambda t: float(t.split()[index]),
                   open(f_exp2, 'r').readlines()))
 
     x, y = normalize(x_, y_)
