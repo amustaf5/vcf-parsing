@@ -13,10 +13,10 @@ BEGIN{
                 key1 = $c1[i]
             }
             else{
-                key1 = key1"_"$c1[i]
+                key1 = key1"\t"$c1[i]
             }
         }
-        a[key1]=$0;
+        a[key1];
         next
     }
     else{
@@ -26,17 +26,18 @@ BEGIN{
                 key2 = $c2[i]
             }
             else{
-                key2 = key2"_"$c2[i]
+                key2 = key2"\t"$c2[i]
             }
         }
         # b[key2]=$0;
         if(key2 in a){
-            printf("%s\t",a[key2])
-            for (j=start; j<=NF; j++){
-                printf("%s%s",$j,j==NF?"\n":"\t")     
-            }
+           # print $0
+           # printf("%s\t",a[key2])
+           # for (j=start; j<=NF; j++){
+           #     printf("%s%s",$j,j==NF?"\n":"\t")     
+           # }
         }
     }
 }
-END{}
+END{for(k in a) print k}
 
