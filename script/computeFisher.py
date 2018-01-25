@@ -31,6 +31,12 @@ def computeFisher(argv):
                         action='store',
                         default='.',
                         help='path of the output folder')
+    parser.add_argument('--alt',
+                        type=str,
+                        dest='alt',
+                        action='store',
+                        default='two-sided',
+                        help='path of the output folder')
 
     args = parser.parse_args()
 
@@ -47,8 +53,10 @@ def computeFisher(argv):
                 # [[mut normal, mut tumor], [non-mut normal, non-mut tumor]]
                 ctable = [[columns[2] + 1, columns[0] + 1],
                           [columns[3] + 1, columns[1] + 1]]
+                # oddsratio, pvalue = stats.fisher_exact(ctable,
+                #                                       alternative='greater')
                 oddsratio, pvalue = stats.fisher_exact(ctable,
-                                                       alternative='greater')
+                                                       alternative=args.alt)
                 print('{:s}\t{:f}\t{:f}'
                       .format(line.strip(),
                               oddsratio,

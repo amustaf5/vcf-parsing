@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import shelve
 
 
 def create_dic_zero(filename):
@@ -10,6 +11,9 @@ def create_dic_zero(filename):
     '''
     d = {}
     lines = open(filename, 'r').readlines()
+    if len(lines) == 0:
+        return d, 0
+
     n = len(lines[0].split())
     for line in lines:
         e = line.split()
@@ -25,19 +29,26 @@ def create_dic(filename, keys_index, key_joint="&"):
     of given columns and as value a range of cols
     or all the columns that are not the key
     '''
-    d = {}
-    lines = open(filename, 'r').readlines()
-    n = len(lines[0].split())
-    for line in lines:
-        e = line.split()
-        if len(e) != n:
-            print >> sys.stderr, "WARNING: wrong number of columns", line
-            continue
-        keys_cols_list = list(map(lambda i: int(i)-1, keys_index.split(",")))
-        k = key_joint.join(list(map(lambda t: e[t], keys_cols_list)))
-        # taking as value only columns that are not also keys
-        v = list(map(lambda j: e[j], set(range(len(e))).difference(keys_cols_list)))
-        d[k] = v
+    d = shelve.open("mydb.shelve", writeback=True)
+    with open(filename, 'r') as infile:
+        for line in infile:
+            # check if lines same lenght in another way
+            n = len(line.split())
+            e = line.split()
+            if len(e) != n:
+                print >> sys.stderr, "WARNING: wrong number of columns", line
+                continue
+            keys_cols_list = list(map(lambda i: int(i)-1, keys_index.split(",")))
+            k = key_joint.join(list(map(lambda t: e[t], keys_cols_list)))
+            # taking as value only columns that are not also keys
+            v = list(map(lambda j: e[j], set(range(len(e))).difference(keys_cols_list)))
+            d[k] = d.get(k, [])
+            d[k].append(v)
+
+    # check if file is empty
+    #if len(lines) == 0:
+    #    return d, 0
+
     return d, n-len(keys_cols_list)
 
 
@@ -72,16 +83,18 @@ def genes_union(file_one, file_two, keys_one, keys_two, sep="\t", key_joint="&")
     for k in keys_union:
         # d_union[k] = d_germ.get(k, 0) + d_soma.get(k, 0)
         l1 = d_germ.get(k, [])
-        if len(l1) != n_germ:
-            l1 = n_germ * [0]
+        if len(l1) == 0:
+            l1 = [n_germ * [0]]
 
         l2 = d_soma.get(k, [])
-        if len(l2) != n_soma:
-            l2 = n_soma * [0]
+        if len(l2) == 0:
+            l2 = [n_soma * [0]]
+
+        for i in l1:
+            for j in l2:
+                print k.replace(key_joint, sep), sep.join(list(map(str, i))), sep.join(list(map(str, j)))
 
         # print k, " ".join((str[j] for j in l1)), " ".join((str[j] for j in l2))
-        print(k.replace(key_joint, sep),
-              sep.join(list(map(str, l1))), sep.join(list(map(str, l2))))
 
     return d_union
 
@@ -113,14 +126,17 @@ def intersect(file_one, file_two, keys_one, keys_two, sep="\t", key_joint="&"):
     # for each keys create enty in d_intersect
     for k in keys_intersect:
         l1 = d_one.get(k, [])
-        if len(l1) != n_one:
-            l1 = n_one * [0]
+        if len(l1) == 0:
+            l1 = [n_one * [0]]
 
         l2 = d_two.get(k, [])
-        if len(l2) != n_two:
-            l2 = n_two * [0]
+        if len(l2) == 0:
+            l2 = [n_two * [0]]
 
-        print k.replace(key_joint, sep), sep.join(list(map(str, l1))), sep.join(list(map(str, l2)))
+        for i in l1:
+            for j in l2:
+                print k.replace(key_joint, sep), sep.join(list(map(str, i))), sep.join(list(map(str, j)))
+#        print k.replace(key_joint, sep), sep.join(list(map(str, l1))), sep.join(list(map(str, l2)))
 
     return d_intersect
 
@@ -149,6 +165,40 @@ def testsubset(file_one, file_two, keys_one, keys_two):
     issubset_bool = set(d_one.keys()).issubset(d_two.keys())
     print int(issubset_bool)
     return issubset_bool
+
+
+def difference(file_one, file_two, keys_one, keys_two, sep="\t", key_joint="&"):
+    '''
+    takes input two files containing N columns tab separated
+    gives output one file resulting by the difference
+    of the commmon keys of the two files
+    '''
+
+    d_one = {}
+    d_two = {}
+    d_difference = {}
+
+    n_one = 0
+    n_two = 0
+
+    if keys_one == "0" and keys_two == "0":
+        d_one, n_one = create_dic_zero(file_one)
+        d_two, n_two = create_dic_zero(file_two)
+    else:
+        d_one, n_one = create_dic(file_one, keys_one)
+        d_two, n_two = create_dic(file_two, keys_two)
+
+    # compute the difference of the keys of the two dictionaryes
+    keys_difference = set(d_one.keys()) - set(d_two.keys())
+
+    # for each keys create enty in d_difference
+    for k in keys_difference:
+        l1 = d_one.get(k, [])
+        if len(l1) != 0:
+            for i in l1:
+                print k.replace(key_joint, sep), sep.join(list(map(str, i)))
+
+    return d_difference
 
 
 def file_merge(argv):
@@ -190,6 +240,10 @@ def file_merge(argv):
     parser.add_argument('--issub',
                         action='store_true',
                         help='append to the existing output file')
+    parser.add_argument('-d',
+                        '--difference',
+                        action='store_true',
+                        help='append to the existing output file')
 
     args = parser.parse_args()
 
@@ -201,6 +255,9 @@ def file_merge(argv):
 
     if args.issub:
         testsubset(args.file_one, args.file_two, args.keys_one, args.keys_two)
+
+    if args.difference:
+        difference(args.file_one, args.file_two, args.keys_one, args.keys_two)
 
 
 if __name__ == "__main__":
